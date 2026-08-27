@@ -84,7 +84,6 @@ class ImageEncoder(torch.nn.Module):
         self.img_ln = nn.LayerNorm(config.rgb.projection_dim)
         self.depth_learnable_linear = nn.Linear(config.depth.feature_dim, config.depth.projection_dim)
         self.depth_ln = nn.LayerNorm(config.depth.projection_dim)
-
         # Dropout layers
         self.env_drop = nn.Dropout(config.env_drop)
         self.dropout = nn.Dropout(config.dropout)

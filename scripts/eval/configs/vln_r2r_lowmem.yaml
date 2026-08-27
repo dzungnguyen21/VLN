@@ -1,0 +1,69 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: vln_r2r
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgbd_agent
+  - /habitat/dataset/vln: mp3d_r2r
+  - /habitat/task/lab_sensors:
+    - gps_sensor
+    - compass_sensor
+  - _self_
+
+habitat:
+  environment:
+    max_episode_steps: 5000
+    iterator_options:
+      max_scene_repeat_steps: 50000
+      shuffle: False
+  simulator:
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            width: 256
+            height: 256
+            hfov: 79
+          depth_sensor:
+            width: 256
+            height: 256
+            hfov: 79
+            min_depth: 0.0
+            max_depth: 10.0
+    forward_step_size: 0.25
+    turn_angle: 15
+    habitat_sim_v0:
+      gpu_device_id: 0
+  task:
+    measurements:
+      distance_to_goal:
+        type: DistanceToGoal
+        distance_to: POINT
+      success:
+        type: Success
+        success_distance: 3.0
+      spl:
+        type: SPL
+      oracle_success:
+        type: OracleSuccess
+      oracle_navigation_error:
+        type: OracleNavigationError
+    actions:
+      stop:
+        type: StopAction
+      move_forward:
+        type: MoveForwardAction
+      turn_left:
+        type: TurnLeftAction
+      turn_right:
+        type: TurnRightAction
+      look_up:
+        type: LookUpAction
+      look_down:
+        type: LookDownAction
+
+  dataset:
+    type: R2RVLN-v1
+    split: val_unseen
+    scenes_dir: data/scene_data/mp3d_ce
+    data_path: data/vln_ce/raw_data/r2r/{split}/{split}.json.gz

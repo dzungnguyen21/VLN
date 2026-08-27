@@ -1,0 +1,42 @@
+# Configuration for VLN Subgoal Pipeline
+
+models:
+  cosmos3:
+    model_id: "nvidia/Cosmos3-Edge"
+    torch_dtype: "bfloat16"
+    device: "cuda"
+    max_new_tokens: 512
+    temperature: 0.2
+    use_mock: false
+  
+  locate_anything:
+    model_id: "nvidia/LocateAnything-3B"
+    torch_dtype: "bfloat16"
+    device: "cuda"
+    confidence_threshold: 0.25
+    use_mock: false
+
+perception:
+  depth:
+    min_depth: 0.1     # meters
+    max_depth: 10.0    # meters
+    patch_radius: 5    # pixels around (u, v) for median depth sampling
+    depth_scale: 1.0   # multiply raw depth by scale to get meters
+  
+  coordinate_frames:
+    camera_frame: "camera_color_optical_frame"
+    base_frame: "base_link"
+    map_frame: "map"
+
+navigation:
+  nav2:
+    action_server_name: "navigate_to_pose"
+    goal_tolerance_xy: 0.5    # meters
+    goal_tolerance_yaw: 0.3   # radians
+    timeout_sec: 120.0
+    use_mock: true            # true allows offline testing without running ROS 2 core
+
+  subgoal_control:
+    max_re_grounding_attempts: 3
+    re_ground_distance_threshold: 1.5   # meters
+    tracking_update_interval_sec: 0.5

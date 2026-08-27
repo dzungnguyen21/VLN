@@ -1,0 +1,23 @@
+# Camera Intrinsics and Extrinsics Configuration
+
+intrinsics:
+  width: 640
+  height: 360
+  fx: 384.0
+  fy: 384.0
+  cx: 320.0
+  cy: 180.0
+  distortion_model: "plumb_bob"
+  d: [0.0, 0.0, 0.0, 0.0, 0.0]
+
+extrinsics_camera_to_base:
+  # Translation (x, y, z in meters)
+  translation:
+    x: 0.15
+    y: 0.0
+    z: 0.50
+  # Rotation (quaternion x, y, z, w or rpy in radians)
+  rotation_rpy:
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0

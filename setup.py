@@ -84,3 +84,17 @@ setuptools.setup(
         "model": model_requires,
     },
 )
+
+
+
+
+
+
+
+# I found these command about Internnav
+# - Cannot understand the geometry 
+# - Misunderstands the sides (left/right) 
+# - Misunderstands the objects (e.g. cannot detect table/ chair/ color) 
+# - Works well in the simulation environment 
+
+# I think these problem belongs to System 2 in the InternNav. I have made a new pipeline [vln_subgoal_pipeline](/home/dungtn21/InternNav/vln_subgoal_pipeline/), it could infer on R2R dataset. 
