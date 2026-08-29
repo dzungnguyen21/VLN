@@ -1,145 +1,65 @@
+import argparse
+import sys
 import os
-import yaml
-import logging
-from typing import Dict, Any, Optional, Tuple, Callable
+import json
+import re
 from PIL import Image
-import numpy as np
 
-from .models.cosmos3_reasoner import Cosmos3Reasoner
-from .models.locate_anything import LocateAnythingGrounder
-from .perception.grounding_3d import Grounding3D
-from .navigation.subgoal_queue import SubgoalQueue
-from .navigation.nav2_client import MockNav2Client, LiveNav2Client, BaseNav2Client
-from .navigation.closed_loop_controller import ClosedLoopVLNController
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from vln_subgoal_pipeline.models.cosmos3_reasoner import Cosmos3Reasoner
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("VLNSubgoalPipeline")
+class UnifiedVLNPipeline:
+    def __init__(self):
+        print("Initializing Unified VLN Pipeline (Cosmos3-Edge Only)...")
+        # Initialize Cosmos3 as BOTH the Reasoner and the Grounder
+        self.reasoner = Cosmos3Reasoner()
+        
+    def process_instruction(self, instruction: str, image_path: str):
+        print(f"\nProcessing Instruction: '{instruction}'")
+        print(f"Loading visual observation from: {image_path}")
+        
+        try:
+            image = Image.open(image_path).convert("RGB")
+        except Exception as e:
+            print(f"Error loading image: {e}")
+            return
+            
+        width, height = image.size
+        print(f"Image dimensions: {width}x{height}")
+        
+        # 1. Generate Subgoals AND 2D Grounding Coordinates in one pass
+        print("Running Cosmos3 Reasoner & Grounder...")
+        subgoals = self.reasoner.decompose(instruction=instruction, image=image)
+        
+        print("\n--- Pipeline Output ---")
+        for sg in subgoals:
+            print(f"\nSubgoal {sg['id']}: {sg['description']}")
+            
+            # Parse the coordinates from the target_landmark string
+            landmark_text = sg.get("target_landmark", "")
+            print(f"  Raw Target: {landmark_text}")
+            
+            match = re.search(r"\[(\d+),\s*(\d+)\]", landmark_text)
+            if match:
+                y_norm, x_norm = int(match.group(1)), int(match.group(2))
+                # Convert normalized [0, 1000] to actual image pixels
+                y_pixel = int((y_norm / 1000.0) * height)
+                x_pixel = int((x_norm / 1000.0) * width)
+                print(f"  Grounding Coordinates: [y={y_pixel}, x={x_pixel}]")
+                # TODO: Pass (x_pixel, y_pixel) to depth_utils to get 3D waypoint for Nav2!
+            else:
+                print("  Grounding Coordinates: Not found by model.")
+                
+        print("\nPipeline execution complete.")
 
+def main():
+    parser = argparse.ArgumentParser(description="Unified Cosmos3 VLN Pipeline")
+    parser.add_argument("--instruction", type=str, required=True, help="Long-horizon instruction")
+    parser.add_argument("--image", type=str, required=True, help="Path to current robot RGB frame")
+    args = parser.parse_args()
+    
+    pipeline = UnifiedVLNPipeline()
+    pipeline.process_instruction(args.instruction, args.image)
 
-class VLNSubgoalPipeline:
-    """
-    Main Orchestrator for the VLN Pipeline with Subgoal Handling.
-    Integrates Cosmos 3 Reasoner + LocateAnything + 3D Grounding + Nav2.
-    """
-
-    def __init__(
-        self,
-        config_path: Optional[str] = None,
-        intrinsics_path: Optional[str] = None,
-        use_mock_models: bool = False,
-        use_mock_nav2: bool = True,
-    ):
-        # Load configs
-        self.config = self._load_yaml(config_path or self._default_config_path("pipeline_config.yaml"))
-        self.intrinsics = self._load_yaml(intrinsics_path or self._default_config_path("camera_intrinsics.yaml"))
-
-        # 1. Initialize Cosmos 3 Reasoner
-        cosmos_cfg = self.config.get("models", {}).get("cosmos3", {})
-        self.reasoner = Cosmos3Reasoner(
-            model_id=cosmos_cfg.get("model_id", "nvidia/Cosmos3-Edge"),
-            device=cosmos_cfg.get("device", "cuda"),
-            torch_dtype=cosmos_cfg.get("torch_dtype", "bfloat16"),
-            max_new_tokens=cosmos_cfg.get("max_new_tokens", 512),
-            use_mock=use_mock_models or cosmos_cfg.get("use_mock", False),
-        )
-
-        # 2. Initialize LocateAnything 2D Visual Grounder
-        locate_cfg = self.config.get("models", {}).get("locate_anything", {})
-        self.grounder = LocateAnythingGrounder(
-            model_id=locate_cfg.get("model_id", "nvidia/LocateAnything-3B"),
-            device=locate_cfg.get("device", "cuda"),
-            torch_dtype=locate_cfg.get("torch_dtype", "bfloat16"),
-            confidence_threshold=locate_cfg.get("confidence_threshold", 0.25),
-            use_mock=use_mock_models or locate_cfg.get("use_mock", False),
-        )
-
-        # 3. Initialize 3D Grounding
-        cam_intro = self.intrinsics.get("intrinsics", {})
-        cam_extro = self.intrinsics.get("extrinsics_camera_to_base", {}).get("translation", {})
-        self.projector_3d = Grounding3D(
-            fx=cam_intro.get("fx", 384.0),
-            fy=cam_intro.get("fy", 384.0),
-            cx=cam_intro.get("cx", 320.0),
-            cy=cam_intro.get("cy", 180.0),
-            camera_offset_x=cam_extro.get("x", 0.15),
-            camera_offset_y=cam_extro.get("y", 0.0),
-            camera_offset_z=cam_extro.get("z", 0.50),
-            standoff_dist=0.60,
-        )
-
-        # 4. Initialize Subgoal Queue
-        self.subgoal_queue = SubgoalQueue()
-
-        # 5. Initialize Nav2 Controller
-        if use_mock_nav2 or self.config.get("navigation", {}).get("nav2", {}).get("use_mock", True):
-            self.nav2_client: BaseNav2Client = MockNav2Client()
-        else:
-            try:
-                self.nav2_client = LiveNav2Client()
-            except Exception as e:
-                logger.warning(f"Could not connect to live ROS 2 Nav2: {e}. Defaulting to MockNav2Client.")
-                self.nav2_client = MockNav2Client()
-
-        # 6. Initialize Closed-Loop Controller
-        ctrl_cfg = self.config.get("navigation", {}).get("subgoal_control", {})
-        self.controller = ClosedLoopVLNController(
-            subgoal_queue=self.subgoal_queue,
-            grounder=self.grounder,
-            projector_3d=self.projector_3d,
-            nav2_client=self.nav2_client,
-            max_re_grounding_attempts=ctrl_cfg.get("max_re_grounding_attempts", 3),
-            re_ground_distance_threshold=ctrl_cfg.get("re_ground_distance_threshold", 1.5),
-        )
-
-    def _default_config_path(self, filename: str) -> str:
-        return os.path.join(os.path.dirname(__file__), "configs", filename)
-
-    def _load_yaml(self, path: str) -> Dict[str, Any]:
-        if os.path.exists(path):
-            with open(path, "r") as f:
-                return yaml.safe_load(f) or {}
-        return {}
-
-    def plan(self, instruction: str, initial_image: Optional[Image.Image] = None) -> SubgoalQueue:
-        """Step 1: Fine-tuned / Prompted Cosmos 3 Subgoal Decomposition."""
-        logger.info(f"Decomposing long-horizon instruction: '{instruction}'")
-        subgoals = self.reasoner.decompose(instruction=instruction, image=initial_image)
-        self.subgoal_queue.load_subgoals(subgoals)
-        logger.info(f"Enqueued {len(self.subgoal_queue)} subgoals into SubgoalQueue.")
-        return self.subgoal_queue
-
-    def run(
-        self,
-        instruction: str,
-        get_rgbd_observation_fn: Callable[[], Tuple[Image.Image, np.ndarray]],
-        initial_image: Optional[Image.Image] = None,
-        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-    ) -> Dict[str, Any]:
-        """
-        Execute full pipeline from long-horizon instruction to task complete.
-
-        Args:
-            instruction: Long-horizon command text
-            get_rgbd_observation_fn: Function providing live/simulated (RGB, Depth)
-            initial_image: Optional initial visual frame for reasoner
-            progress_callback: Optional status callback
-
-        Returns:
-            Execution summary dict.
-        """
-        # Step 1: Subgoal Decomposition & Enqueue
-        self.plan(instruction=instruction, initial_image=initial_image)
-
-        # Step 2: Closed-Loop Execution Loop
-        success = self.controller.execute_all(
-            get_rgbd_observation_fn=get_rgbd_observation_fn,
-            progress_callback=progress_callback,
-        )
-
-        return {
-            "success": success,
-            "instruction": instruction,
-            "subgoals": self.subgoal_queue.to_list(),
-            "execution_log": [e.to_dict() for e in self.controller.execution_log],
-            "all_completed": self.subgoal_queue.is_all_completed(),
-        }
+if __name__ == "__main__":
+    main()
