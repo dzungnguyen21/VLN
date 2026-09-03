@@ -20,53 +20,90 @@ Given a long-horizon navigation instruction and the current visual observation o
 
 Each subgoal must:
 1. Be a clear intermediate step towards the final destination.
-2. Specify the prominent visual landmark or object to ground and navigate towards.
-3. Be ordered logically from start to completion.
+2. Specify a single, visually-groundable landmark to navigate towards: either a specific object
+   (a sofa, a desk) or a discrete visual opening/threshold (a doorway, an archway, a hallway
+   entrance, a staircase, a window). NEVER use a bare room or area name (e.g. "the living room",
+   "the kitchen") as the target_location -- a room has no single pixel or visual boundary that a
+   downstream vision model can point at and later re-confirm as "reached" from a new vantage point.
+   If the step is about entering, exiting, or passing through a room (e.g. "exit the living room",
+   "go into the kitchen", "walk through the dining room"), set target_location to the specific
+   doorway/archway/opening used to enter or exit that room (e.g. "the doorway leading out of the
+   living room", "the archway into the kitchen"), never the room's own name. If no single doorway
+   or opening exists at that transition (e.g. an open-plan boundary), pick the nearest concrete
+   object marking that boundary instead (e.g. "the bookshelf at the edge of the living room").
+3. Capture any explicit directional or spatial cue the instruction gives for that step (e.g. "turn
+   right", "on your left", "straight ahead", "past the kitchen") -- use "None" if the instruction
+   gives no direction for that particular step.
+4. Be ordered logically from start to completion.
 
 You MUST respond strictly with a valid JSON array of objects with the following schema:
 [
   {
     "id": 1,
     "description": "<actionable step description>",
-    "target_landmark": "<specific visual landmark or object for 2D/3D grounding>"
+    "target_location": "<a specific object OR a discrete opening/doorway/threshold for 2D/3D grounding, e.g. 'the sofa near the patio doors' or 'the doorway leading out of the living room'. NEVER a bare room/area name by itself (do NOT use 'the living room' alone).>",
+    "guided_direction": "<explicit directional/spatial cue from the instruction for this step, or \\"None\\">"
   },
   ...
 ]
 Do not output any introductory or concluding text outside the JSON array. Do not show your reasoning process."""
 
     DETECT_PROMPT_TEMPLATE = """You are looking at a single camera frame during robot navigation.
+Guided direction from the instruction for this step (if any): {guided_direction}
+
 Candidate target landmarks, in priority order (LAST is highest priority): {landmarks}
 
 Respond with ONLY this JSON:
-{{"visible": [{{"landmark": "<exact string from the candidate list>", "pixel": [y, x]}}], "guess_pixel": [y, x], "guess_label": "<short phrase>", "guess_confidence": <float 0.0-1.0>}}
+{{"current_location": "<short phrase for the room/area YOU appear to be in right now>", "visible": [{{"landmark": "<exact string from the candidate list>", "pixel": [y, x]}}], "guess_pixel": [y, x], "guess_label": "<short phrase>", "guess_confidence": <float 0.0-1.0>}}
 
+- "current_location" is your own best guess at what room/area you are currently standing in (e.g.
+  "bedroom", "hallway", "living room near a couch"), based only on what's visible in this frame.
 - "visible": every candidate landmark that is CLEARLY visible in this frame, each with its center
   pixel normalized to [0, 1000]. Use the landmark string EXACTLY as given. Empty list if none of
-  the candidates are visible.
+  the candidates are visible. IMPORTANT: only mark a candidate visible if THIS SPECIFIC INSTANCE
+  genuinely matches the target -- a different object of the same type elsewhere (a different desk,
+  a different sofa, a different doorway, in a different room than expected) does NOT count as
+  visible. When unsure, leave it out of "visible" and express your uncertainty via
+  guess_confidence instead; a false
+  match here makes the robot think it arrived somewhere it didn't.
 - "guess_pixel" / "guess_label" / "guess_confidence" are REQUIRED in every response, even when
-  "visible" is empty: your best guess at the single most promising point in this frame to move
-  toward in search of the candidates -- an open doorway, the mouth of a hallway, unobstructed
-  floor space, etc. "guess_label" is a short phrase (3-6 words) naming WHAT is actually at that
-  pixel (e.g. "open doorway on the left", "hallway leading forward", "a couch blocking the path").
-  "guess_confidence" is how confident you are that moving toward that pixel leads toward the
-  candidates (0.0 = no idea, 1.0 = very confident). Base all of this on visible cues: doorways,
-  hallways, the general room layout, or partial glimpses of similar objects.
+  "visible" is empty. REASON about where the target is most likely to be, then point at the pixel
+  that best matches that reasoning -- do not default to "whichever path looks most open":
+    * Combine the target's identity with your own "current_location" -- e.g. if you're in a
+      bedroom and the target is a couch in the living room, prefer a doorway/hallway that
+      plausibly leads toward a living-room-like space, not just any doorway.
+    * Use indirect visual cues -- a partial glimpse of furniture through an opening, the
+      orientation of a hallway, typical room adjacency (a kitchen is often near a dining area, a
+      bathroom often opens off a hallway) -- to judge one direction as more promising than
+      another.
+    * If a guided direction is given above, prefer a guess consistent with it over one that
+      merely looks open.
+    * Only when NONE of the above give any signal at all (no cues, no direction, nothing
+      suggesting one way over another) fall back to the most open/unobstructed path as a
+      last-resort default -- that should be the exception, not your default answer.
+  "guess_label" is a short phrase (3-6 words) naming WHAT is actually at that pixel (e.g. "open
+  doorway on the left", "hallway leading forward", "a couch blocking the path"). "guess_confidence"
+  reflects how confident you are given the reasoning above (0.0 = a pure fallback guess with no
+  real signal, 1.0 = strong contextual evidence this leads toward the target).
 
 No explanation, no reasoning, no extra text."""
 
-    REASONING_PROMPT_TEMPLATE = """You are an embodied navigation agent. You just completed a full \
-360-degree scan without finding your target and need to pick a direction to explore next.
+    REASONING_PROMPT_TEMPLATE = """You are an embodied navigation agent exploring an indoor environment.
+You just completed a full 360-degree scan, and your target was NOT found in your current location.
 
-Current objective: '{target_desc}'
+Current location: '{current_location}'
+Target objective: '{target_desc}'
+Subsequent objective: '{next_target_desc}'
 
-Here is what was observed at each heading during the scan (heading 0 is where the scan started; \
-each next heading is {scan_turn_angle} degrees further, turning left):
+Here is what was observed in each direction during your 360-degree scan (heading 0 is the starting orientation; each subsequent heading turns left by {scan_turn_angle}°):
 {memory_summary}
 
-Reason about which heading is most likely to eventually lead to the objective -- consider visible \
-landmarks, hallway/doorway cues, and general room layout. Avoid headings marked collision=true \
-(a wall/obstacle blocks that direction immediately). Respond with ONLY this JSON:
-{{"best_heading": <int>, "reason": "<one short sentence>"}}"""
+Reason about which heading is the most logical exit or pathway from your current room ('{current_location}') to reach '{target_desc}'.
+- Connect room layout and spatial logic: e.g. if you are in a bedroom and need to reach the living room, choose an open doorway, hallway, or archway leading out of the bedroom, rather than a closet, bathroom, or dead-end wall.
+- If the subsequent objective is known, use it as a hint for overall direction.
+- Avoid headings marked collision=True (blocked path).
+Respond with ONLY this JSON:
+{{"best_heading": <int>, "reason": "<one short sentence explaining why this heading leads from current_location toward target_desc>"}}"""
 
     def __init__(
         self,
@@ -196,30 +233,43 @@ landmarks, hallway/doorway cues, and general room layout. Avoid headings marked 
 
             # All 3 attempts produced malformed/truncated JSON (e.g. the model ran out
             # of its length budget mid-object). Rather than discarding everything for a
-            # single hardcoded placeholder subgoal (which has no target_landmark and can
+            # single hardcoded placeholder subgoal (which has no target_location and can
             # never be found -- see detect_current_frame), salvage whichever COMPLETE
-            # {id, description, target_landmark} objects are present in the last attempt.
+            # {id, description, target_location} prefixes are present in the last attempt
+            # (guided_direction is decorative context, defaulted to "None" if truncated off).
             salvaged = self._salvage_json_subgoals(last_response_text)
             if salvaged:
                 logger.warning(f"Failed after 3 attempts to get well-formed JSON; salvaged "
                                 f"{len(salvaged)} complete subgoal(s) from the last attempt.")
                 return salvaged
             logger.error(f"Failed after 3 attempts and nothing salvageable. Last output: {last_response_text[:500]}...")
-            return [{"id": 1, "description": "Explore the area (Error)", "target_landmark": ""}]
+            return [{"id": 1, "description": "Explore the area (Error)", "target_location": "", "guided_direction": "None"}]
         except Exception as e:
             logger.error(f"Inference error with Cosmos 3: {e}")
-            return [{"id": 1, "description": "Explore the area (Error)", "target_landmark": ""}]
+            return [{"id": 1, "description": "Explore the area (Error)", "target_location": "", "guided_direction": "None"}]
         finally:
             self._move_model_to_cpu()
 
-    def detect_landmarks(self, target_landmarks: List[str], image: Image.Image) -> Dict[str, Any]:
+    def detect_landmarks(
+        self, target_landmarks: List[str], image: Image.Image, guided_direction: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         Single call per frame checking ALL candidate landmarks at once (priority-by-visibility
         is resolved by the caller from the "visible" list, not here).
 
-        Returns: {"visible": [{"landmark": str, "pixel": "[y, x]"}], "guess_pixel": "[y, x]" or
-        None, "guess_label": str, "guess_confidence": float 0.0-1.0}
-        - "visible" lists every candidate literally seen in this frame, with its pixel.
+        guided_direction: an optional explicit directional/spatial cue from the instruction for
+        the current subgoal (e.g. "turn right"), or None/"None" if the instruction gives no
+        direction for this step. Passed through as context so the model can both bias its
+        exploration guess and judge whether a candidate match is really the intended instance.
+
+        Returns: {"current_location": str, "visible": [{"landmark": str, "pixel": "[y, x]"}],
+        "guess_pixel": "[y, x]" or None, "guess_label": str, "guess_confidence": float 0.0-1.0}
+        - "current_location" is the model's own live guess at what room/area it's currently in,
+          based on this frame alone (e.g. "bedroom", "hallway").
+        - "visible" lists every candidate literally seen in this frame, with its pixel. The model
+          is instructed to only count a genuinely-matching instance, not a same-type lookalike
+          elsewhere -- reduces false "found" detections that would otherwise make the agent think
+          it reached the wrong instance of a generic landmark.
         - "guess_pixel"/"guess_label"/"guess_confidence" are populated even when nothing is
           visible: the model's best guess at the most promising point to move toward in search
           of the candidates, a short phrase naming what's actually there (e.g. "open doorway"),
@@ -234,13 +284,19 @@ landmarks, hallway/doorway cues, and general room layout. Avoid headings marked 
             "; ".join(target_landmarks) if target_landmarks
             else "(none specific right now -- just find the most promising open path forward)"
         )
+        direction_text = guided_direction if guided_direction and guided_direction != "None" else "None"
         content = [
             {"type": "image", "image": image},
-            {"type": "text", "text": self.DETECT_PROMPT_TEMPLATE.format(landmarks=landmarks_text)},
+            {"type": "text", "text": self.DETECT_PROMPT_TEMPLATE.format(
+                landmarks=landmarks_text, guided_direction=direction_text,
+            )},
         ]
         messages = [{"role": "user", "content": content}]
 
-        default_result = {"visible": [], "guess_pixel": None, "guess_label": "", "guess_confidence": 0.0}
+        default_result = {
+            "current_location": "", "visible": [], "guess_pixel": None,
+            "guess_label": "", "guess_confidence": 0.0,
+        }
 
         try:
             self._move_model_to_gpu()
@@ -264,6 +320,7 @@ landmarks, hallway/doorway cues, and general room layout. Avoid headings marked 
 
             try:
                 parsed = json.loads(match.group(0))
+                current_location = str(parsed.get("current_location", ""))
                 visible = []
                 for item in parsed.get("visible", []) or []:
                     landmark = item.get("landmark")
@@ -283,6 +340,8 @@ landmarks, hallway/doorway cues, and general room layout. Avoid headings marked 
                 # guess_pixel and leaves the agent spinning with nothing to act on --
                 # salvage whatever fields are recoverable via regex.
                 logger.debug(f"JSON parsing failed for detect_landmarks response: '{cleaned}'. Error: {parse_err}")
+                cl_match = re.search(r'"current_location"\s*:\s*"([^"]*)"', cleaned)
+                current_location = cl_match.group(1) if cl_match else ""
                 visible = [
                     {"landmark": m.group(1), "pixel": f"[{int(m.group(2))}, {int(m.group(3))}]"}
                     for m in re.finditer(
@@ -300,7 +359,7 @@ landmarks, hallway/doorway cues, and general room layout. Avoid headings marked 
 
             guess_confidence = max(0.0, min(1.0, guess_confidence))
             return {
-                "visible": visible, "guess_pixel": guess_pixel,
+                "current_location": current_location, "visible": visible, "guess_pixel": guess_pixel,
                 "guess_label": guess_label, "guess_confidence": guess_confidence,
             }
 
@@ -311,15 +370,15 @@ landmarks, hallway/doorway cues, and general room layout. Avoid headings marked 
             self._move_model_to_cpu()
 
     def reason_best_heading(
-        self, memory: List[Dict[str, Any]], target_desc: str, scan_turn_angle: int = 45
+        self, memory: List[Dict[str, Any]], target_desc: str, scan_turn_angle: int = 45,
+        next_target_desc: Optional[str] = None,
+        current_location: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Text-only reasoning call over the per-heading memory collected during a completed
-        360-degree scan (each entry: heading index, visible_landmarks, guess_confidence,
-        collision). Asks Cosmos to choose which heading to commit to next.
-
-        Returns: {"best_heading": int, "reason": str}. Caller is responsible for validating
-        that best_heading is in range and not marked collision=true before using it.
+        360-degree scan (each entry: heading index, observation/guess_label, visible_landmarks,
+        guess_confidence, collision). Asks Cosmos to choose which heading to commit to next
+        based on current_location, target destination, and observed openings/doorways.
         """
         if self.model is None:
             raise RuntimeError("Cosmos3Reasoner model is not loaded.")
@@ -327,15 +386,20 @@ landmarks, hallway/doorway cues, and general room layout. Avoid headings marked 
 
         lines = []
         for entry in memory:
-            landmarks = ", ".join(entry.get("visible_landmarks") or []) or "none"
+            obs = entry.get("observation") or entry.get("guess_label") or ", ".join(entry.get("visible_landmarks") or []) or "open area"
+            deg = entry.get("abs_heading_deg", entry["heading"] * scan_turn_angle)
             lines.append(
-                f"Heading {entry['heading']}: visible landmarks=[{landmarks}], "
+                f"Heading {entry['heading']} ({deg}°): observation='{obs}', "
                 f"confidence={entry.get('guess_confidence', 0.0):.2f}, "
                 f"collision={entry.get('collision', False)}"
             )
         memory_summary = "\n".join(lines)
         prompt_text = self.REASONING_PROMPT_TEMPLATE.format(
-            target_desc=target_desc, scan_turn_angle=scan_turn_angle, memory_summary=memory_summary,
+            current_location=current_location or "an indoor room",
+            target_desc=target_desc,
+            next_target_desc=next_target_desc or "(none -- this is the final subgoal)",
+            scan_turn_angle=scan_turn_angle,
+            memory_summary=memory_summary,
         )
         messages = [{"role": "user", "content": [{"type": "text", "text": prompt_text}]}]
 
@@ -404,15 +468,25 @@ landmarks, hallway/doorway cues, and general room layout. Avoid headings marked 
         Last-resort recovery when every retry attempt in decompose() still produced
         malformed/truncated JSON (e.g. the model ran out of its length budget mid-object,
         leaving a dangling unterminated string/object at the end). Pulls out whichever
-        COMPLETE {id, description, target_landmark} objects are present, in order, and
-        discards the truncated tail. Returns [] if nothing complete is recoverable.
+        subgoals have at least a complete {id, description, target_location} prefix, in
+        order -- these three are the fields the state machine actually needs to run.
+        guided_direction is trailing decorative context in the schema (see
+        SUBGOAL_SYSTEM_PROMPT) and truncation typically cuts it first; if it's not present
+        it defaults to "None" here rather than discarding an otherwise-usable subgoal.
+        Returns [] if nothing with that prefix is recoverable.
         """
-        return [
-            {"id": int(m.group("id")), "description": m.group("description"),
-             "target_landmark": m.group("landmark")}
-            for m in re.finditer(
-                r'\{\s*"id"\s*:\s*(?P<id>\d+)\s*,\s*"description"\s*:\s*"(?P<description>(?:[^"\\]|\\.)*)"\s*,\s*'
-                r'"target_landmark"\s*:\s*"(?P<landmark>(?:[^"\\]|\\.)*)"\s*\}',
-                response_text, re.DOTALL,
-            )
-        ]
+        results = []
+        for m in re.finditer(
+            r'\{\s*"id"\s*:\s*(?P<id>\d+)\s*,\s*"description"\s*:\s*"(?P<description>(?:[^"\\]|\\.)*)"\s*,\s*'
+            r'"target_location"\s*:\s*"(?P<location>(?:[^"\\]|\\.)*)"',
+            response_text, re.DOTALL,
+        ):
+            tail = response_text[m.end():m.end() + 200]
+            gd_match = re.search(r'^\s*,\s*"guided_direction"\s*:\s*"((?:[^"\\]|\\.)*)"', tail)
+            results.append({
+                "id": int(m.group("id")),
+                "description": m.group("description"),
+                "target_location": m.group("location"),
+                "guided_direction": gd_match.group(1) if gd_match else "None",
+            })
+        return results
