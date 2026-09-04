@@ -1,22 +1,5 @@
-import numpy as np
-
 from .config import SCAN_TURN_ANGLE
 from .geometry import heading_clearance, parse_pixel_target, unproject_pixel, valid_depth
-
-
-def _snap_to_navmesh(env, world_pt):
-    """A pointed-to pixel's unprojected 3D point often lands on an object's own
-    surface/footprint (e.g. a dining tabletop), which is typically NOT on the
-    navmesh (furniture footprints are excluded) -- snap to the nearest point
-    the agent can actually stand at, which is what both the follower and the
-    SUBGOAL_REACHED_DIST arrival check should be measured against. Falls back
-    to the unsnapped point (rather than discarding the detection) if nothing
-    navigable is within snap_point()'s search radius -- rare, and this way the
-    existing distance/relocate logic still degrades gracefully."""
-    snapped = env.sim.pathfinder.snap_point(world_pt)
-    if np.any(np.isnan(snapped)):
-        return world_pt
-    return snapped
 
 
 def cosmos3_worker(task_queue, result_queue):
@@ -36,14 +19,9 @@ def cosmos3_worker(task_queue, result_queue):
                 target_landmarks=candidates, image=image, guided_direction=guided_direction,
             ))
         elif mode == "reason":
-            if len(payload) == 4:
-                memory, target_desc, next_target_desc, current_location = payload
-            else:
-                memory, target_desc, next_target_desc = payload
-                current_location = None
+            memory, target_desc = payload
             result_queue.put(reasoner.reason_best_heading(
-                memory=memory, target_desc=target_desc, scan_turn_angle=SCAN_TURN_ANGLE,
-                next_target_desc=next_target_desc, current_location=current_location,
+                memory=memory, target_desc=target_desc, scan_turn_angle=SCAN_TURN_ANGLE
             ))
 
 
@@ -106,9 +84,7 @@ def detect_current_frame(task_queue, result_queue, target_desc, exhausted,
             continue
         sensor_state = env.sim.get_agent_state().sensor_states["rgb"]
         found = True
-        found_world_pt = _snap_to_navmesh(
-            env, unproject_pixel(x_pixel, y_pixel, d_val, sensor_state, rgb_img.shape)
-        )
+        found_world_pt = unproject_pixel(x_pixel, y_pixel, d_val, sensor_state)
         found_pixel = px
         break
 
@@ -122,9 +98,7 @@ def detect_current_frame(task_queue, result_queue, target_desc, exhausted,
             d_val = valid_depth(depth_img, x_pixel, y_pixel)
             if d_val is not None:
                 sensor_state = env.sim.get_agent_state().sensor_states["rgb"]
-                guess_world_pt = _snap_to_navmesh(
-                    env, unproject_pixel(x_pixel, y_pixel, d_val, sensor_state, rgb_img.shape)
-                )
+                guess_world_pt = unproject_pixel(x_pixel, y_pixel, d_val, sensor_state)
                 guess_pixel = px
 
     clearance = heading_clearance(depth_img)

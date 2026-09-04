@@ -4,18 +4,13 @@ import cv2
 from PIL import Image
 
 from .config import (
-    CONFIRMED_REFINE_DIST,
-    DEPTH_MAX,
-    DEPTH_MIN,
     EXPLORE_DESC,
-    EXPLORE_REACHED_DIST,
     LIVE_PREVIEW_PATH,
     MAX_LOST_RELOCATES,
     MAX_STEPS_NO_PROGRESS,
     MAX_UNCONFIRMED_RELOCATES,
     MOVE_FWD,
     RELOCATE_EVERY,
-    RGB_HFOV_DEG,
     SEARCH_PLAN,
     SEARCH_PLAN_HEADING_DEG,
     SIM_TURN_ANGLE,
@@ -23,10 +18,9 @@ from .config import (
     SUBGOAL_REACHED_DIST,
     SUCCESS_DIST,
     TURN_LEFT,
-    TURN_MANEUVER_TURNS,
     TURN_RIGHT,
 )
-from .geometry import horiz_dist, is_backtracking, parse_guided_turn, turns_to_heading
+from .geometry import horiz_dist, is_backtracking, turns_to_heading
 from .hud import draw_target_marker, render_hud_frame
 from .perception import cosmos3_worker, detect_current_frame
 from .state import AgentState
@@ -50,12 +44,6 @@ def run_closed_loop(episode_index=None):
         "habitat.dataset.scenes_dir=data/scene_data/",
         "habitat.environment.max_episode_steps=10000",  # our loop controls termination
         f"habitat.task.measurements.success.success_distance={SUCCESS_DIST}",  # keep in sync with SUCCESS_DIST
-        # Widened from Habitat's 90deg default so more of the scene fits in frame per
-        # step -- must stay in sync with RGB_HFOV_DEG, which geometry.unproject_pixel()
-        # also reads; both sensors, since a detected pixel's depth is read at the same
-        # index in both images.
-        f"habitat.simulator.agents.main_agent.sim_sensors.rgb_sensor.hfov={RGB_HFOV_DEG}",
-        f"habitat.simulator.agents.main_agent.sim_sensors.depth_sensor.hfov={RGB_HFOV_DEG}",
     ])
     env = habitat.Env(config=config)
     follower = ShortestPathFollower(env.sim, goal_radius=SUBGOAL_REACHED_DIST, return_one_hot=False)
@@ -107,7 +95,6 @@ def run_closed_loop(episode_index=None):
     cached_target_world_pt = None
     cached_target_pixel = None
     pursuing_confirmed = False   # True: cached target is a literally-FOUND subgoal. False: best-guess heading.
-    refined_close = False        # True if close-up 3D target refinement has already been performed
     steps_since_relocate = RELOCATE_EVERY
     consecutive_lost_relocates = 0
     consecutive_unconfirmed_relocates = 0   # relocates spent chasing the SAME unconfirmed
@@ -131,18 +118,6 @@ def run_closed_loop(episode_index=None):
             return None
         return subgoal_queue[current_subgoal_idx]
 
-    def get_next_target_location():
-        """The subgoal AFTER the current one, for reason_best_heading()'s extra
-        context -- a single scan's per-heading cues are often too weak to judge
-        from the current objective alone (e.g. several headings all show "an
-        open doorway"); knowing what comes next helps disambiguate. None if the
-        current subgoal is the last one (or the queue is already exhausted)."""
-        next_idx = current_subgoal_idx + 1
-        if next_idx < len(subgoal_queue):
-            nxt = subgoal_queue[next_idx]
-            return nxt.get("target_location") or nxt.get("description")
-        return None
-
     def get_subgoal_items():
         """For the HUD's 'Subgoals:' list -- the full plan exactly as
         decomposed at step 0, each one flagged achieved/not so the panel can
@@ -161,42 +136,21 @@ def run_closed_loop(episode_index=None):
 
     def reset_pursuit():
         nonlocal cached_target_world_pt, cached_target_pixel, pursuing_confirmed
-        nonlocal steps_since_relocate, consecutive_lost_relocates, consecutive_unconfirmed_relocates, refined_close
+        nonlocal steps_since_relocate, consecutive_lost_relocates, consecutive_unconfirmed_relocates
         cached_target_world_pt = None
         cached_target_pixel = None
         pursuing_confirmed = False
-        refined_close = False
         steps_since_relocate = RELOCATE_EVERY
         consecutive_lost_relocates = 0
         consecutive_unconfirmed_relocates = 0
         start_new_search()
 
-    def advance_subgoal():
-        """Subgoal complete: advance the queue, drop anti-backtrack memory, reset
-        into a fresh search -- and if the just-completed subgoal's guided_direction
-        said left/right, queue that as a deterministic turn maneuver BEFORE the
-        next search begins (via the same pending_actions queue already used by the
-        SEARCHING branch's no-usable-depth fallback below; reset_pursuit() has just
-        put us into a fresh SEARCHING state with an empty queue, so this is safe).
-        Turning is pure geometry once the target is grounded -- not something to
-        ask the VLM to visually judge from a single frame."""
-        nonlocal current_subgoal_idx, last_explore_heading_deg, pending_actions
-        completed = subgoal_queue[current_subgoal_idx]
-        current_subgoal_idx += 1
-        last_explore_heading_deg = None   # fresh subgoal -- drop the anti-backtrack memory
-        reset_pursuit()
-        turn_dir = parse_guided_turn(completed.get("guided_direction"))
-        if turn_dir is not None:
-            turn_action = TURN_LEFT if turn_dir == "left" else TURN_RIGHT
-            pending_actions = [turn_action] * TURN_MANEUVER_TURNS
-
     def enter_navigating(world_pt, pixel, confirmed):
         nonlocal cached_target_world_pt, cached_target_pixel, pursuing_confirmed
-        nonlocal steps_since_relocate, consecutive_lost_relocates, consecutive_unconfirmed_relocates, state, refined_close
+        nonlocal steps_since_relocate, consecutive_lost_relocates, consecutive_unconfirmed_relocates, state
         cached_target_world_pt = world_pt
         cached_target_pixel = pixel
         pursuing_confirmed = confirmed
-        refined_close = False
         steps_since_relocate = 0
         consecutive_lost_relocates = 0
         consecutive_unconfirmed_relocates = 0
@@ -212,20 +166,20 @@ def run_closed_loop(episode_index=None):
         else:
             last_seen_label = result["guess_label"] or "nothing recognizable"
             last_seen_confidence = result["guess_confidence"]
-        cl = result.get("current_location")
-        if cl and cl.strip() and cl.strip().lower() not in ["unknown", "(unknown)", "none", ""]:
-            last_current_location = cl.strip()
+        last_current_location = result.get("current_location") or "(unknown)"
 
     def commit_to_found(result):
         """Shared handling for 'the current subgoal's landmark is literally visible',
         whether that happened while SEARCHING: enter NAVIGATING and pick this
         same step's action immediately (advance now if already in reach)."""
-        nonlocal action
+        nonlocal action, current_subgoal_idx, last_explore_heading_deg
         enter_navigating(result["found_world_pt"], result["found_pixel"], confirmed=True)
         agent_pos = env.sim.get_agent_state().position
         dist = horiz_dist(agent_pos, cached_target_world_pt)
         if dist < SUBGOAL_REACHED_DIST:
-            advance_subgoal()
+            current_subgoal_idx += 1
+            last_explore_heading_deg = None   # fresh subgoal -- drop the anti-backtrack memory
+            reset_pursuit()
         else:
             action = follower.get_next_action(cached_target_world_pt)
             if action is None or action == 0:
@@ -265,8 +219,6 @@ def run_closed_loop(episode_index=None):
     #      "close enough to the estimated target location" success criteria.
     # ---------------------------------------------------------------------
     target_desc = subgoal_queue[0].get("description", "Unknown") if subgoal_queue else ""
-    target_location = (subgoal_queue[0].get("target_location") or target_desc) if subgoal_queue else EXPLORE_DESC
-    guided_direction = (subgoal_queue[0].get("guided_direction") or "None") if subgoal_queue else "None"
     exhausted = (current_subgoal_idx >= len(subgoal_queue))
 
     with tqdm(desc="Navigation Steps", unit="step") as pbar:
@@ -291,9 +243,8 @@ def run_closed_loop(episode_index=None):
                 view_color = (0, 255, 0) if last_seen_found else (0, 200, 255)
                 canvas = render_hud_frame(
                     final_display_img, step, "STOPPED", (0, 255, 0), "STOP", (0, 255, 0),
-                    "REACHED", get_subgoal_items(), last_seen_label, view_color,
+                    pursuing_confirmed, get_subgoal_items(), last_seen_label, view_color,
                     last_seen_confidence, final_metrics.get("distance_to_goal", 9999),
-                    last_current_location, target_location,
                 )
                 cv2.imwrite(LIVE_PREVIEW_PATH, canvas)
                 frames.append(canvas)
@@ -341,69 +292,70 @@ def run_closed_loop(episode_index=None):
             # are pursued strictly in order -- no skipping ahead.
             # =========================================================
             if state == AgentState.NAVIGATING and cached_target_world_pt is not None:
-                agent_pos = env.sim.get_agent_state().position
-                dist = horiz_dist(agent_pos, cached_target_world_pt)
+                should_relocate = steps_since_relocate >= RELOCATE_EVERY
+                if should_relocate:
+                    steps_since_relocate = 0
+                    result = detect_current_frame(
+                        task_queue, result_queue, target_location, exhausted,
+                        img_pil, rgb_img, depth_img, env, guided_direction=guided_direction,
+                    )
+                    record_seen(result)
 
-                # 1. Check arrival conditions first
-                if pursuing_confirmed and dist < SUBGOAL_REACHED_DIST:
-                    tqdm.write(f"Step {step} -> Subgoal '{target_desc}' REACHED "
-                                f"(dist={dist:.2f}m). Advancing queue.")
-                    advance_subgoal()
-                elif not pursuing_confirmed and dist < EXPLORE_REACHED_DIST:
-                    # Reached the committed exploration waypoint (doorway / open space).
-                    # Stop here and start a fresh 360 scan from this new vantage point.
-                    tqdm.write(f"Step {step} -> Reached exploration waypoint (dist={dist:.2f}m). "
-                                f"Starting fresh scan from new area.")
-                    reset_pursuit()
-                else:
-                    # 2. Relocation / Re-probing:
-                    # For CONFIRMED targets:
-                    #   - Re-detect when entering close range (dist <= CONFIRMED_REFINE_DIST, e.g. 1.5m)
-                    #     to refine the exact 3D coordinates from up close.
-                    #   - Otherwise check periodically every RELOCATE_EVERY steps.
-                    # For EXPLORING targets:
-                    #   - Check every RELOCATE_EVERY steps ONLY to check if the real target landmark appeared.
-                    #   - Do NOT overwrite the waypoint with new guesses, avoiding zigzagging!
-                    if pursuing_confirmed:
-                        should_relocate = (dist <= CONFIRMED_REFINE_DIST and not refined_close) or (steps_since_relocate >= RELOCATE_EVERY)
-                    else:
-                        should_relocate = steps_since_relocate >= RELOCATE_EVERY
-
-                    if should_relocate:
-                        steps_since_relocate = 0
-                        result = detect_current_frame(
-                            task_queue, result_queue, target_location, exhausted,
-                            img_pil, rgb_img, depth_img, env, guided_direction=guided_direction,
-                        )
-                        record_seen(result)
-
-                        if result["found"]:
-                            cached_target_world_pt = result["found_world_pt"]
-                            cached_target_pixel = result["found_pixel"]
-                            pursuing_confirmed = True
-                            consecutive_lost_relocates = 0
-                            if dist <= CONFIRMED_REFINE_DIST:
-                                refined_close = True
-                                tqdm.write(f"Step {step} -> Refined target '{target_location}' close-up at dist={dist:.2f}m.")
-                        elif pursuing_confirmed:
-                            # Confirmed target temporarily occluded -- continue driving toward cached target
-                            consecutive_lost_relocates += 1
-                            if consecutive_lost_relocates >= MAX_LOST_RELOCATES:
-                                tqdm.write(f"Step {step} -> Lost '{target_location}' for "
-                                            f"{consecutive_lost_relocates} relocates, dropping target.")
-                                reset_pursuit()
+                    if result["found"]:
+                        cached_target_world_pt = result["found_world_pt"]
+                        cached_target_pixel = result["found_pixel"]
+                        pursuing_confirmed = True
+                        consecutive_lost_relocates = 0
+                    elif pursuing_confirmed:
+                        # Confirmed target didn't reconfirm this relocate -- don't downgrade
+                        # to some unrelated best-guess point on a single miss. Keep driving
+                        # toward the stale cached target and tolerate transient occlusion up
+                        # to MAX_LOST_RELOCATES before giving up on it.
+                        consecutive_lost_relocates += 1
+                        if consecutive_lost_relocates >= MAX_LOST_RELOCATES:
+                            tqdm.write(f"Step {step} -> Lost '{target_location}' for "
+                                        f"{consecutive_lost_relocates} relocates, dropping target.")
+                            reset_pursuit()
+                    elif result["guess_world_pt"] is not None:
+                        # Already exploring (not confirmed) -- a guess being available on
+                        # every relocate is NOT the same as making progress: it can keep
+                        # refreshing to a near-identical point that's never quite reachable
+                        # (e.g. something seen through a window/doorway the navmesh can't
+                        # close within SUBGOAL_REACHED_DIST of), pursuing it forever. Cap
+                        # how many relocates we'll chase a still-unconfirmed guess before
+                        # giving up on it and re-searching instead.
+                        consecutive_unconfirmed_relocates += 1
+                        if consecutive_unconfirmed_relocates >= MAX_UNCONFIRMED_RELOCATES:
+                            tqdm.write(f"Step {step} -> Unconfirmed guess for '{target_location}' never "
+                                        f"resolved after {consecutive_unconfirmed_relocates} relocates, "
+                                        f"giving up and re-searching.")
+                            reset_pursuit()
                         else:
-                            # Exploring: landmark is still not directly visible.
-                            # Keep committed to the current exploration waypoint without jittering.
-                            consecutive_unconfirmed_relocates += 1
-                            if consecutive_unconfirmed_relocates >= MAX_UNCONFIRMED_RELOCATES:
-                                tqdm.write(f"Step {step} -> Exploration waypoint for '{target_location}' unreachable after "
-                                            f"{consecutive_unconfirmed_relocates} checks, re-searching.")
-                                reset_pursuit()
+                            cached_target_world_pt = result["guess_world_pt"]
+                            cached_target_pixel = result["guess_pixel"]
+                            pursuing_confirmed = False
+                            consecutive_lost_relocates = 0
                     else:
-                        steps_since_relocate += 1
+                        # Was chasing a best-guess point and the refresh came back unusable
+                        # (no depth anywhere) -- that guess is stale, start a fresh search.
+                        reset_pursuit()
+                else:
+                    steps_since_relocate += 1
 
-                    if cached_target_world_pt is not None:
+                if cached_target_world_pt is not None:
+                    agent_pos = env.sim.get_agent_state().position
+                    dist = horiz_dist(agent_pos, cached_target_world_pt)
+                    if dist < SUBGOAL_REACHED_DIST:
+                        if pursuing_confirmed:
+                            tqdm.write(f"Step {step} -> Subgoal '{target_desc}' REACHED "
+                                        f"(dist={dist:.2f}m). Advancing queue.")
+                            current_subgoal_idx += 1
+                            last_explore_heading_deg = None   # fresh subgoal -- drop the anti-backtrack memory
+                        else:
+                            tqdm.write(f"Step {step} -> Reached exploration point "
+                                        f"(dist={dist:.2f}m). Rescanning.")
+                        reset_pursuit()
+                    else:
                         action = follower.get_next_action(cached_target_world_pt)
                         if action is None or action == 0:
                             action = MOVE_FWD
@@ -446,8 +398,6 @@ def run_closed_loop(episode_index=None):
                             "heading": plan_index,
                             "abs_heading_deg": (sweep_start_heading_deg + SEARCH_PLAN_HEADING_DEG[plan_index]) % 360,
                             "visible_landmarks": result["visible_names"],
-                            "current_location": result.get("current_location", ""),
-                            "observation": result.get("guess_label", ""),
                             "guess_confidence": result["guess_confidence"],
                             "collision": result["collision"],
                             "world_pt": result["guess_world_pt"],
@@ -455,8 +405,6 @@ def run_closed_loop(episode_index=None):
                         })
                         depth_note = "" if result["guess_world_pt"] is not None else " [no usable depth]"
                         tqdm.write(f"Step {step} -> Searching (plan step {plan_index+1}/{len(SEARCH_PLAN)}), "
-                                    f"loc='{result.get('current_location', last_current_location)}', "
-                                    f"obs='{result.get('guess_label', '')}', "
                                     f"confidence={result['guess_confidence']:.2f} "
                                     f"collision={result['collision']} for '{target_location[:24]}'{depth_note}")
 
@@ -472,13 +420,10 @@ def run_closed_loop(episode_index=None):
                             usable = [e for e in search_memory if e["world_pt"] is not None]
                             if usable:
                                 task_queue.put(("reason", (
-                                    [{"heading": e["heading"], "abs_heading_deg": e["abs_heading_deg"],
-                                      "observation": e.get("observation", ""), "visible_landmarks": e["visible_landmarks"],
+                                    [{"heading": e["heading"], "visible_landmarks": e["visible_landmarks"],
                                       "guess_confidence": e["guess_confidence"], "collision": e["collision"]}
                                      for e in search_memory],
                                     target_location,
-                                    get_next_target_location(),
-                                    last_current_location,
                                 )))
                                 reasoning = result_queue.get()
                                 best_heading = reasoning.get("best_heading", 0)
@@ -520,13 +465,10 @@ def run_closed_loop(episode_index=None):
                                 # same call as the grounded case above. Reorient to face
                                 # its pick and take one blind step, then restart the sweep.
                                 task_queue.put(("reason", (
-                                    [{"heading": e["heading"], "abs_heading_deg": e["abs_heading_deg"],
-                                      "observation": e.get("observation", ""), "visible_landmarks": e["visible_landmarks"],
+                                    [{"heading": e["heading"], "visible_landmarks": e["visible_landmarks"],
                                       "guess_confidence": e["guess_confidence"], "collision": e["collision"]}
                                      for e in search_memory],
                                     target_location,
-                                    get_next_target_location(),
-                                    last_current_location,
                                 )))
                                 reasoning = result_queue.get()
                                 best_heading = reasoning.get("best_heading", 0)
@@ -566,19 +508,11 @@ def run_closed_loop(episode_index=None):
                 AgentState.SEARCHING: (255, 200, 0),
             }.get(state, (255, 255, 255))
 
-            if state == AgentState.NAVIGATING:
-                current_sg_state = "NAVIGATING (Target Locked)" if pursuing_confirmed else "EXPLORING (Towards Waypoint)"
-            elif state == AgentState.SEARCHING:
-                current_sg_state = "SEARCHING (360° Scan)"
-            else:
-                current_sg_state = state.name
-
             view_color = (0, 255, 0) if last_seen_found else (0, 200, 255)
             canvas = render_hud_frame(
                 display_img, step, state.name, state_color, str(action), (255, 255, 255),
-                current_sg_state, get_subgoal_items(), last_seen_label, view_color,
+                pursuing_confirmed, get_subgoal_items(), last_seen_label, view_color,
                 last_seen_confidence, dist_to_goal,
-                last_current_location, target_location,
             )
             cv2.imwrite(LIVE_PREVIEW_PATH, canvas)
             frames.append(canvas)

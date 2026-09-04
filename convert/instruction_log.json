@@ -1,0 +1,629 @@
+[
+    {
+        "id": "run_02",
+        "instruction": "Walk down the corridor, stop at the white door, turn left and go straight until you stop in front of the room.",
+        "file_bag": [
+            "zed_record_run_02_01",
+            "zed_record_run_02_02",
+            "zed_record_run_02_03",
+            "zed_record_run_02_04",
+            "zed_record_run_02_05"
+        ]
+    },
+    {
+        "id": "run_03",
+        "instruction": "Go straight down the hallway, past the black cabinet, turn right, go straight a short distance, then turn right again and stop in front of the black refrigerator.",
+        "file_bag": [
+            "zed_record_run_03_01",
+            "zed_record_run_03_02",
+            "zed_record_run_03_03",
+            "zed_record_run_03_04",
+            "zed_record_run_03_05"
+        ]
+    },
+    {
+        "id": "run_04",
+        "instruction": "Go straight down the corridor, then turn right and go straight to the tall brown tables and chairs and stop.",
+        "file_bag": [
+            "zed_record_run_04_01",
+            "zed_record_run_04_02",
+            "zed_record_run_04_03",
+            "zed_record_run_04_04",
+            "zed_record_run_04_05"
+        ]
+    },
+    {
+        "id": "run_06",
+        "instruction": "Go straight down the corridor, then turn right and go straight to the tall brown tables and chairs and stop.",
+        "file_bag": [
+            "zed_record_run_06_01",
+            "zed_record_run_06_02",
+            "zed_record_run_06_03",
+            "zed_record_run_06_04",
+            "zed_record_run_06_05"
+        ]
+    },
+    {
+        "id": "run_07",
+        "instruction": "Go straight down the corridor, past the row of gray cabinets containing plants on the right to the end of the corridor, turn right and go straight ahead to the tall brown tables and chairs, then stop.",
+        "file_bag": [
+            "zed_record_run_07_01",
+            "zed_record_run_07_02",
+            "zed_record_run_07_03",
+            "zed_record_run_07_04",
+            "zed_record_run_07_05"
+        ]
+    },
+    {
+        "id": "run_08",
+        "instruction": "Step back, turn right, then walk straight down the corridor, turn left, and stop in front of the first desk.",
+        "file_bag": [
+            "zed_record_run_08_01",
+            "zed_record_run_08_02",
+            "zed_record_run_08_03",
+            "zed_record_run_08_04",
+            "zed_record_run_08_05"
+        ]
+    },
+    {
+        "id": "run_09",
+        "instruction": "Walk down the hallway, past the robot display, potted plants, and fire extinguisher racks, turn right, continue straight until you reach the first white cabinet with plant rack, then stop.",
+        "file_bag": [
+            "zed_record_run_09_01",
+            "zed_record_run_09_02",
+            "zed_record_run_09_03",
+            "zed_record_run_09_04",
+            "zed_record_run_09_05"
+        ]
+    },
+    {
+        "id": "run_14",
+        "instruction": "Walk down the hallway, past the row of white cabinets and plant shelves, then turn right and continue straight towards the potted plants near the fire extinguisher shelf, then stop.",
+        "file_bag": [
+            "zed_record_run_14_01",
+            "zed_record_run_14_02",
+            "zed_record_run_14_03",
+            "zed_record_run_14_04",
+            "zed_record_run_14_05"
+        ]
+    },
+    {
+        "id": "run_24",
+        "instruction": "Go straight to the corner with the high table, turn right, and walk straight along the corridor to the emergency exit, then stop in front of the door",
+        "file_bag": [
+            "zed_record_run_24_01",
+            "zed_record_run_24_02",
+            "zed_record_run_24_03",
+            "zed_record_run_24_04",
+            "zed_record_run_24_05"
+        ]
+    },
+    {
+        "id": "run_25",
+        "instruction": "Turn right and walk past the billiard table, go straight to the high table, then turn left to the orange sofa set and stop.",
+        "file_bag": [
+            "zed_record_run_25_01",
+            "zed_record_run_25_02",
+            "zed_record_run_25_03",
+            "zed_record_run_25_04",
+            "zed_record_run_25_05"
+        ]
+    },
+    {
+        "id": "run_26",
+        "instruction": "Walk around and turn left, straight to the billiard table and stop in front of the set orange sofa near the TV.",
+        "file_bag": [
+            "zed_record_run_26_01",
+            "zed_record_run_26_02",
+            "zed_record_run_26_03",
+            "zed_record_run_26_04",
+            "zed_record_run_26_05"
+        ]
+    },
+    {
+        "id": "run_28",
+        "instruction": "Go to the pool table and turn left. Continue to the first desk and stop.",
+        "file_bag": [
+            "zed_record_run_28_01",
+            "zed_record_run_28_02",
+            "zed_record_run_28_03",
+            "zed_record_run_28_04",
+            "zed_record_run_28_05"
+        ]
+    },
+    {
+        "id": "run_29",
+        "instruction": "Go to the pool table, turn right, walk straight to the black chairs, and wait there.",
+        "file_bag": [
+            "zed_record_run_29_01",
+            "zed_record_run_29_02",
+            "zed_record_run_29_03",
+            "zed_record_run_29_04",
+            "zed_record_run_29_05"
+        ]
+    },
+    {
+        "id": "run_32",
+        "instruction": "Cross the lobby to the billiard table. Go to the left and wait in front of the row of fire extinguishers.",
+        "file_bag": [
+            "zed_record_run_32_01",
+            "zed_record_run_32_02",
+            "zed_record_run_32_03",
+            "zed_record_run_32_04",
+            "zed_record_run_32_05"
+        ]
+    },
+    {
+        "id": "run_33",
+        "instruction": "Go to the pool table, then turn right and walk across the main hall. Stop at the fire cabinet on the right.",
+        "file_bag": [
+            "zed_record_run_33_01",
+            "zed_record_run_33_02",
+            "zed_record_run_33_03",
+            "zed_record_run_33_04",
+            "zed_record_run_33_05"
+        ]
+    },
+    {
+        "id": "run_34",
+        "instruction": "Go to the pool table then turn right and cross the hall. Wait in front of the black plant cabinet",
+        "file_bag": [
+            "zed_record_run_34_01",
+            "zed_record_run_34_02",
+            "zed_record_run_34_03",
+            "zed_record_run_34_04",
+            "zed_record_run_34_05"
+        ]
+    },
+    {
+        "id": "run_35",
+        "instruction": "Walk through the lobby and past the white tables and chairs, then turn left. Go straight and stop in front of the row of fire extinguishers.",
+        "file_bag": [
+            "zed_record_run_35_01",
+            "zed_record_run_35_02",
+            "zed_record_run_35_03",
+            "zed_record_run_35_04",
+            "zed_record_run_35_05"
+        ]
+    },
+    {
+        "id": "run_36",
+        "instruction": "Go to the meeting room door and wait.",
+        "file_bag": [
+            "zed_record_run_36_01",
+            "zed_record_run_36_02",
+            "zed_record_run_36_03",
+            "zed_record_run_36_04",
+            "zed_record_run_36_05"
+        ]
+    },
+    {
+        "id": "run_37",
+        "instruction": "Walk to the sofa and stop.",
+        "file_bag": [
+            "zed_record_run_37_01",
+            "zed_record_run_37_02",
+            "zed_record_run_37_03",
+            "zed_record_run_37_04",
+            "zed_record_run_37_05"
+        ]
+    },
+    {
+        "id": "run_38",
+        "instruction": "Turn left and walk past the white tables and chairs to the pool table. Turn left, head toward the hallway, then turn right. Walk along the hallway and stop in front of the white door.",
+        "file_bag": [
+            "zed_record_run_38_01",
+            "zed_record_run_38_02",
+            "zed_record_run_38_03",
+            "zed_record_run_38_04",
+            "zed_record_run_38_05"
+        ]
+    },
+    {
+        "id": "run_39",
+        "instruction": "Walk to the end of the hallway and turn left toward the pool table. Turn right, walk around the white table and chairs, and turn left. Continue past the foosball table and stop at the water dispenser.",
+        "file_bag": [
+            "zed_record_run_39_01",
+            "zed_record_run_39_02",
+            "zed_record_run_39_03",
+            "zed_record_run_39_04",
+            "zed_record_run_39_05"
+        ]
+    },
+    {
+        "id": "run_41",
+        "instruction": "Walk up to the white table and chairs, turn left, then walk straight to the meeting room door and wait.",
+        "file_bag": [
+            "zed_record_run_41_01",
+            "zed_record_run_41_02",
+            "zed_record_run_41_03",
+            "zed_record_run_41_04",
+            "zed_record_run_41_05"
+        ]
+    },
+    {
+        "id": "run_42",
+        "instruction": "Go to the billiard table, then turn left and stop in front of the sofa.",
+        "file_bag": [
+            "zed_record_run_42_01",
+            "zed_record_run_42_02",
+            "zed_record_run_42_03",
+            "zed_record_run_42_04",
+            "zed_record_run_42_05"
+        ]
+    },
+    {
+        "id": "run_43",
+        "instruction": "Go to the white table and chairs and turn right. Walk around them and stop in front of the black chairs.",
+        "file_bag": [
+            "zed_record_run_43_01",
+            "zed_record_run_43_02",
+            "zed_record_run_43_03",
+            "zed_record_run_43_04",
+            "zed_record_run_43_05"
+        ]
+    },
+    {
+        "id": "run_44",
+        "instruction": "Go to the end of the hallway and turn right. Then, walk along the hallway and stop at the emergency exit.",
+        "file_bag": [
+            "zed_record_run_44_01",
+            "zed_record_run_44_02",
+            "zed_record_run_44_03",
+            "zed_record_run_44_04",
+            "zed_record_run_44_05"
+        ]
+    },
+    {
+        "id": "run_45",
+        "instruction": "Walk to the end of the hallway and turn right. Go to the pool table and stop.",
+        "file_bag": [
+            "zed_record_run_45_01",
+            "zed_record_run_45_02",
+            "zed_record_run_45_03",
+            "zed_record_run_45_04",
+            "zed_record_run_45_05"
+        ]
+    },
+    {
+        "id": "run_46",
+        "instruction": "Go to the potted plant and turn left. Pass through the meeting room door and wait next to the first potted plant on the right.",
+        "file_bag": [
+            "zed_record_run_46_01",
+            "zed_record_run_46_02",
+            "zed_record_run_46_03",
+            "zed_record_run_46_04",
+            "zed_record_run_46_05"
+        ]
+    },
+    {
+        "id": "run_47",
+        "instruction": "Go to the end of the hallway and turn left. Continue past the potted plant, then turn right and wait in front of the billiard table.",
+        "file_bag": [
+            "zed_record_run_47_01",
+            "zed_record_run_47_02",
+            "zed_record_run_47_03",
+            "zed_record_run_47_04",
+            "zed_record_run_47_05"
+        ]
+    },
+    {
+        "id": "run_49",
+        "instruction": "Walk to the end of the hallway, turn left, and stop in front of the sofa.",
+        "file_bag": [
+            "zed_record_run_49_01",
+            "zed_record_run_49_02",
+            "zed_record_run_49_03",
+            "zed_record_run_49_04",
+            "zed_record_run_49_05"
+        ]
+    },
+    {
+        "id": "run_50",
+        "instruction": "Walked along the corridor and stopped in front of the gray emergency exit.",
+        "file_bag": [
+            "zed_record_run_50_01",
+            "zed_record_run_50_02",
+            "zed_record_run_50_03",
+            "zed_record_run_50_04",
+            "zed_record_run_50_05"
+        ]
+    },
+    {
+        "id": "run_57",
+        "instruction": "Go to the planter and turn right into the hallway. Then, walk straight to the gray emergency exit and stop.",
+        "file_bag": [
+            "zed_record_run_57_01",
+            "zed_record_run_57_02",
+            "zed_record_run_57_03",
+            "zed_record_run_57_04",
+            "zed_record_run_57_05"
+        ]
+    },
+    {
+        "id": "run_58",
+        "instruction": "Walk past the pool table, then go straight into the hallway and turn right. Walk to the first potted plant and stop.",
+        "file_bag": [
+            "zed_record_run_58_01",
+            "zed_record_run_58_02",
+            "zed_record_run_58_03",
+            "zed_record_run_58_04",
+            "zed_record_run_58_05"
+        ]
+    },
+    {
+        "id": "run_60",
+        "instruction": "Go straight, across the lobby, then turn slightly to the right, then go straight and stop in front of the printer.",
+        "file_bag": [
+            "zed_record_run_60_01",
+            "zed_record_run_60_02",
+            "zed_record_run_60_03",
+            "zed_record_run_60_04",
+            "zed_record_run_60_05"
+        ]
+    },
+    {
+        "id": "run_62",
+        "instruction": "Walk straight past the white table and chairs and turn right. Continue to the front of the pool table and stop.",
+        "file_bag": [
+            "zed_record_run_62_01",
+            "zed_record_run_62_02",
+            "zed_record_run_62_03",
+            "zed_record_run_62_04",
+            "zed_record_run_62_05"
+        ]
+    },
+    {
+        "id": "run_64",
+        "instruction": "Go straight to the black chairs, turn right, then go straight to the potted plant near the fire extinguisher cabinet and stop.",
+        "file_bag": [
+            "zed_record_run_64_01",
+            "zed_record_run_64_02",
+            "zed_record_run_64_03",
+            "zed_record_run_64_04",
+            "zed_record_run_64_05"
+        ]
+    },
+    {
+        "id": "run_65",
+        "instruction": "Go straight, turn right at the billiard, then around two sets of white tables and chairs; finally, turn left and stop in front of the water dispenser.",
+        "file_bag": [
+            "zed_record_run_65_01",
+            "zed_record_run_65_02",
+            "zed_record_run_65_03",
+            "zed_record_run_65_04",
+            "zed_record_run_65_05"
+        ]
+    },
+    {
+        "id": "run_68",
+        "instruction": "Go straight past the potted plants and stop in front of the first black door in the hallway.",
+        "file_bag": [
+            "zed_record_run_68_01",
+            "zed_record_run_68_02",
+            "zed_record_run_68_03",
+            "zed_record_run_68_04",
+            "zed_record_run_68_05"
+        ]
+    },
+    {
+        "id": "run_70",
+        "instruction": "Go straight to the robot testing chamber, then turn right. Continue straight until you reach the test ramp, then stop.",
+        "file_bag": [
+            "zed_record_run_70_01",
+            "zed_record_run_70_02",
+            "zed_record_run_70_03",
+            "zed_record_run_70_04",
+            "zed_record_run_70_05"
+        ]
+    },
+    {
+        "id": "run_71",
+        "instruction": "Go straight to the robot testing enclosure, turn left toward the row of workbenches, turn left again past the potted plants, and stop in front of the fire extinguisher shelf.",
+        "file_bag": [
+            "zed_record_run_71_01",
+            "zed_record_run_71_02",
+            "zed_record_run_71_03",
+            "zed_record_run_71_04",
+            "zed_record_run_71_05"
+        ]
+    },
+    {
+        "id": "run_72",
+        "instruction": "Go straight to the robot testing chamber, turn left to the row of workbenches, turn left again and pass the potted plant, finally go straight and stop at the potted plant near the white exit door.",
+        "file_bag": [
+            "zed_record_run_72_01",
+            "zed_record_run_72_02",
+            "zed_record_run_72_03",
+            "zed_record_run_72_04",
+            "zed_record_run_72_05"
+        ]
+    },
+    {
+        "id": "run_75",
+        "instruction": "Go straight down the corridor, turn right at the door, continue straight to the robot hangar, turn right again, go straight to the test ramp and stop.",
+        "file_bag": [
+            "zed_record_run_75_01",
+            "zed_record_run_75_02",
+            "zed_record_run_75_03",
+            "zed_record_run_75_04",
+            "zed_record_run_75_05"
+        ]
+    },
+    {
+        "id": "run_77",
+        "instruction": "Go straight down the hallway and stop at the potted plant next to the fire extinguisher stand.",
+        "file_bag": [
+            "zed_record_run_77_01",
+            "zed_record_run_77_02",
+            "zed_record_run_77_03",
+            "zed_record_run_77_04",
+            "zed_record_run_77_05"
+        ]
+    },
+    {
+        "id": "run_78",
+        "instruction": "Walk straight along the hallway and stop in front of the emergency dark grey exit door.",
+        "file_bag": [
+            "zed_record_run_78_01",
+            "zed_record_run_78_02",
+            "zed_record_run_78_03",
+            "zed_record_run_78_04",
+            "zed_record_run_78_05"
+        ]
+    },
+    {
+        "id": "run_83",
+        "instruction": "Go straight ahead and stop in front of the high table at the end of the hallway.",
+        "file_bag": [
+            "zed_record_run_83_01",
+            "zed_record_run_83_02",
+            "zed_record_run_83_03",
+            "zed_record_run_83_04",
+            "zed_record_run_83_05"
+        ]
+    },
+    {
+        "id": "run_100",
+        "instruction": "Go straight across the stage and pass two sets of white tables chairs, then stop in front of the water dispenser behind it.",
+        "file_bag": [
+            "zed_record_run_100_01",
+            "zed_record_run_100_02",
+            "zed_record_run_100_03",
+            "zed_record_run_100_04",
+            "zed_record_run_100_05"
+        ]
+    },
+    {
+        "id": "run_103",
+        "instruction": "Walk up to the sofa and stop.",
+        "file_bag": [
+            "zed_record_run_103_01",
+            "zed_record_run_103_02",
+            "zed_record_run_103_03",
+            "zed_record_run_103_04",
+            "zed_record_run_103_05"
+        ]
+    },
+    {
+        "id": "run_104",
+        "instruction": "Walk over to the pool table and stop.",
+        "file_bag": [
+            "zed_record_run_104_01",
+            "zed_record_run_104_02",
+            "zed_record_run_104_03",
+            "zed_record_run_104_04",
+            "zed_record_run_104_05"
+        ]
+    },
+    {
+        "id": "run_106",
+        "instruction": "Go straight and stop in front of the foosball table.",
+        "file_bag": [
+            "zed_record_run_106_01",
+            "zed_record_run_106_02",
+            "zed_record_run_105_03",
+            "zed_record_run_106_04",
+            "zed_record_run_106_05"
+        ]
+    },
+    {
+        "id": "run_107",
+        "instruction": "Walk straight and stop in front of the pool table.",
+        "file_bag": [
+            "zed_record_run_107_01",
+            "zed_record_run_107_02",
+            "zed_record_run_107_03",
+            "zed_record_run_107_04",
+            "zed_record_run_107_05"
+        ]
+    },
+    {
+        "id": "run_108",
+        "instruction": "Walk past the white table and chairs and cross the main hall. Stop in front of the first table in the row of yellow tables.",
+        "file_bag": [
+            "zed_record_run_108_01",
+            "zed_record_run_108_02",
+            "zed_record_run_108_03",
+            "zed_record_run_108_04",
+            "zed_record_run_108_05"
+        ]
+    },
+    {
+        "id": "run_109",
+        "instruction": "Walk past the white table and chairs and stop in front of the pool table",
+        "file_bag": [
+            "zed_record_run_109_01",
+            "zed_record_run_109_02",
+            "zed_record_run_109_03",
+            "zed_record_run_109_04",
+            "zed_record_run_109_05"
+        ]
+    },
+    {
+        "id": "run_111",
+        "instruction": "Go straight ahead and stop in front of the fire extinguisher shelf near the tall brown table and chairs in the corner of the room.",
+        "file_bag": [
+            "zed_record_run_111_01",
+            "zed_record_run_111_02",
+            "zed_record_run_111_03",
+            "zed_record_run_111_04",
+            "zed_record_run_111_05"
+        ]
+    },
+    {
+        "id": "run_114",
+        "instruction": "Walk straight and stop in front of the stage.",
+        "file_bag": [
+            "zed_record_run_114_01",
+            "zed_record_run_114_02",
+            "zed_record_run_114_03",
+            "zed_record_run_114_04",
+            "zed_record_run_114_05"
+        ]
+    },
+    {
+        "id": "run_115",
+        "instruction": "Go straight and stop in front of the red column.",
+        "file_bag": [
+            "zed_record_run_115_01",
+            "zed_record_run_115_02",
+            "zed_record_run_115_03",
+            "zed_record_run_115_04",
+            "zed_record_run_115_05"
+        ]
+    },
+    {
+        "id": "run_116",
+        "instruction": "Turn left, walk through the lobby, turn right, and stop in front of the refrigerator in the pantry.",
+        "file_bag": [
+            "zed_record_run_116_01",
+            "zed_record_run_116_02",
+            "zed_record_run_116_03",
+            "zed_record_run_116_04",
+            "zed_record_run_116_05"
+        ]
+    },
+    {
+        "id": "run_117",
+        "instruction": "Exit the pantry and turn left. Walk through the lobby and stop in front of the red pillar.",
+        "file_bag": [
+            "zed_record_run_117_01",
+            "zed_record_run_117_02",
+            "zed_record_run_117_03",
+            "zed_record_run_117_04",
+            "zed_record_run_117_05"
+        ]
+    },
+    {
+        "id": "run_119",
+        "instruction": "Walk past the black chairs and turn right. Continue walking, then stop in front of the stage.",
+        "file_bag": [
+            "zed_record_run_119_01",
+            "zed_record_run_119_02",
+            "zed_record_run_119_03",
+            "zed_record_run_119_04",
+            "zed_record_run_119_05"
+        ]
+    }
+]

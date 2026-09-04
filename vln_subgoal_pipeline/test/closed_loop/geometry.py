@@ -8,7 +8,6 @@ from .config import (
     COLLISION_NEAR,
     DEPTH_MAX,
     DEPTH_MIN,
-    RGB_HFOV_DEG,
     SEARCH_PLAN_HEADING_DEG,
     SIM_TURN_ANGLE,
     TURN_LEFT,
@@ -16,14 +15,10 @@ from .config import (
 )
 
 
-def unproject_pixel(x, y, depth_val, sensor_state, img_shape):
-    """img_shape: the actual (H, W, ...) of the frame the pixel came from --
-    NEVER hardcode resolution/HFOV here, both must always match the real
-    sensor config (RGB_HFOV_DEG in config.py) or every unprojected 3D point
-    becomes silently wrong (no crash, just bad geometry)."""
+def unproject_pixel(x, y, depth_val, sensor_state):
     import quaternion
-    HEIGHT, WIDTH = img_shape[0], img_shape[1]
-    HFOV = np.radians(RGB_HFOV_DEG)
+    WIDTH, HEIGHT = 256, 256
+    HFOV = np.pi / 2.0
     fx = (WIDTH / 2.0) / np.tan(HFOV / 2.0)
     fy = fx
     cx, cy = WIDTH / 2.0, HEIGHT / 2.0
@@ -110,17 +105,3 @@ def is_backtracking(candidate_deg, last_explore_deg):
     diff = abs(candidate_deg - reverse_deg) % 360
     diff = min(diff, 360 - diff)
     return diff < ANTI_BACKTRACK_TOLERANCE_DEG
-
-
-def parse_guided_turn(guided_direction):
-    """Classify a subgoal's guided_direction text into a discrete turn, or None.
-    Deterministic substring match -- turning is pure geometry once a target is
-    grounded, not something to ask the VLM to visually judge from one frame."""
-    if not guided_direction:
-        return None
-    text = guided_direction.lower()
-    if "left" in text:
-        return "left"
-    if "right" in text:
-        return "right"
-    return None

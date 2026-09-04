@@ -11,9 +11,7 @@ SUCCESS_DIST = 3.0                # meters to R2R ground-truth goal to attempt S
                                    # (which defaults success_distance to 0.2m) will never agree with
                                    # our STOP decision even when we stop at the "correct" distance.
 
-RELOCATE_EVERY = 5                # step cadence to check for landmark while moving
-CONFIRMED_REFINE_DIST = 1.5       # meters: distance to landmark to perform close-up target refinement
-EXPLORE_REACHED_DIST = 0.75       # meters: when an unconfirmed exploration waypoint is reached
+RELOCATE_EVERY = 3                # only re-probe every N steps while pursuing a target
 MAX_LOST_RELOCATES = 4            # consecutive failed re-locates before dropping a CONFIRMED target
 MAX_UNCONFIRMED_RELOCATES = 4     # consecutive relocates spent chasing the SAME unconfirmed best-guess
                                    # point before giving up on it and re-searching -- without this, a
@@ -32,20 +30,6 @@ TURN_LEFT = 2   # habitat/config/habitat/task/vln_r2r.yaml actions: [stop, move_
 TURN_RIGHT = 3
 MOVE_FWD = 1
 STOP = 0
-
-TURN_MANEUVER_DEGREES = 90   # deterministic turn executed once a subgoal completes, if its
-                               # guided_direction says "left"/"right" (see geometry.parse_guided_turn())
-                               # -- pure geometry once the target is grounded, not something to ask
-                               # the VLM to visually judge from a single frame.
-TURN_MANEUVER_TURNS = TURN_MANEUVER_DEGREES // SIM_TURN_ANGLE
-
-RGB_HFOV_DEG = 120   # widened from Habitat's 90 default -- more of the scene fits in frame per
-                       # step, directly reducing "target nearby but just outside the camera's view"
-                       # misses. This is the ONLY place this number should be written -- read by
-                       # both the get_config() sensor overrides in runner.py AND
-                       # geometry.unproject_pixel()'s camera-intrinsics math, which must stay in
-                       # lockstep with the actual sensor config or every unprojected 3D point
-                       # becomes silently wrong (no crash, just bad geometry).
 
 LIVE_PREVIEW_PATH = "/home/dungtn21/InternNav/vln_subgoal_pipeline/live_view.jpg"
 
