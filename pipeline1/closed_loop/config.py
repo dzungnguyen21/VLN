@@ -31,8 +31,8 @@ TURN_RIGHT = 3
 MOVE_FWD = 1
 STOP = 0
 
-LIVE_PREVIEW_PATH = "/home/dungtn21/InternNav/pipeline1/live_view.jpg"
-VIDEO_OUTPUT_DIR = "/home/dungtn21/InternNav/pipeline1"
+LIVE_PREVIEW_PATH = "./pipeline1/live_view.jpg"
+VIDEO_OUTPUT_DIR = "./pipeline1"
 
 EXPLORE_DESC = "the most open, unobstructed path forward toward the destination"
 
