@@ -1,9 +1,9 @@
 import os
 import sys
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from vln_subgoal_pipeline.test.closed_loop.runner import run_closed_loop
+from pipeline1.closed_loop.runner import run_closed_loop
 
 if __name__ == "__main__":
     import argparse

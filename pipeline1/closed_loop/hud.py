@@ -52,7 +52,7 @@ def _wrap_text(text, max_width_px, font_scale=FONT_SCALE, thickness=FONT_THICKNE
 
 def render_hud_frame(bgr_display_img, step, state_name, state_color, action_label, action_color,
                       subgoal_achieved, subgoal_items, view_label, view_color,
-                      confidence, dist_to_goal, current_location, target_location):
+                      confidence, dist_to_goal, current_location="(unknown)", target_location=""):
     """
     Build the HUD canvas with 16:9 aspect ratio:
     - 70% width on the left for the camera/simulator frame.
@@ -94,8 +94,8 @@ def render_hud_frame(bgr_display_img, step, state_name, state_color, action_labe
         ("Action:", str(action_label), action_color),
         ("Current subgoal state:", str(subgoal_achieved),
          (0, 255, 0) if subgoal_achieved else (0, 100, 255)),
-        ("Current location:", current_location, (200, 200, 200)),
-        ("Target location:", target_location, (200, 200, 200)),
+        ("Current location:", str(current_location or "(unknown)"), (200, 200, 200)),
+        ("Target location:", str(target_location or ""), (200, 200, 200)),
         ("View:", view_label, view_color),
         ("Conf:", f"{confidence:.2f}", view_color),
         ("R2R dist:", f"{dist_to_goal:.1f}m", (255, 255, 255)),

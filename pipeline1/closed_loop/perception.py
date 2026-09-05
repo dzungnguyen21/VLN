@@ -3,7 +3,7 @@ from .geometry import heading_clearance, parse_pixel_target, unproject_pixel, va
 
 
 def cosmos3_worker(task_queue, result_queue):
-    from vln_subgoal_pipeline.models.cosmos3_reasoner import Cosmos3Reasoner
+    from pipeline1.models.cosmos3_reasoner import Cosmos3Reasoner
     reasoner = Cosmos3Reasoner()
     while True:
         task = task_queue.get()

@@ -1,4 +1,5 @@
 import multiprocessing as mp
+import os
 
 import cv2
 from PIL import Image
@@ -19,6 +20,7 @@ from .config import (
     SUCCESS_DIST,
     TURN_LEFT,
     TURN_RIGHT,
+    VIDEO_OUTPUT_DIR,
 )
 from .geometry import horiz_dist, is_backtracking, turns_to_heading
 from .hud import draw_target_marker, render_hud_frame
@@ -219,6 +221,7 @@ def run_closed_loop(episode_index=None):
     #      "close enough to the estimated target location" success criteria.
     # ---------------------------------------------------------------------
     target_desc = subgoal_queue[0].get("description", "Unknown") if subgoal_queue else ""
+    target_location = (subgoal_queue[0].get("target_location") or target_desc) if subgoal_queue else ""
     exhausted = (current_subgoal_idx >= len(subgoal_queue))
 
     with tqdm(desc="Navigation Steps", unit="step") as pbar:
@@ -245,6 +248,8 @@ def run_closed_loop(episode_index=None):
                     final_display_img, step, "STOPPED", (0, 255, 0), "STOP", (0, 255, 0),
                     pursuing_confirmed, get_subgoal_items(), last_seen_label, view_color,
                     last_seen_confidence, final_metrics.get("distance_to_goal", 9999),
+                    current_location=last_current_location,
+                    target_location=target_location,
                 )
                 cv2.imwrite(LIVE_PREVIEW_PATH, canvas)
                 frames.append(canvas)
@@ -513,6 +518,8 @@ def run_closed_loop(episode_index=None):
                 display_img, step, state.name, state_color, str(action), (255, 255, 255),
                 pursuing_confirmed, get_subgoal_items(), last_seen_label, view_color,
                 last_seen_confidence, dist_to_goal,
+                current_location=last_current_location,
+                target_location=target_location,
             )
             cv2.imwrite(LIVE_PREVIEW_PATH, canvas)
             frames.append(canvas)
@@ -551,7 +558,7 @@ def run_closed_loop(episode_index=None):
     print(f"SPL (Efficiency): {metrics['spl']:.2f}")
     print("----------------------------\n")
 
-    out_path = f"/home/dungtn21/InternNav/vln_subgoal_pipeline/closed_loop_ep{ep_id}.mp4"
+    out_path = os.path.join(VIDEO_OUTPUT_DIR, f"closed_loop_ep{ep_id}.mp4")
     print(f"Saving video to {out_path}...")
     if frames:
         height, width = frames[0].shape[:2]
