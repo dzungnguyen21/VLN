@@ -5,7 +5,6 @@ from config import (COSMOS3_EDGE_CHECKPOINT, SYSTEM2_DTYPE, SYSTEM2_LORA_ALPHA,
 DTYPE_BY_NAME = {"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}
 
 
-def load_reasoner(checkpoint=COSMOS3_EDGE_CHECKPOINT, dtype=SYSTEM2_DTYPE):
 def load_reasoner(checkpoint=COSMOS3_EDGE_CHECKPOINT, dtype=SYSTEM2_DTYPE, device=None):
     """Cosmos3-Edge's Reasoner Tower as a standalone VLM.
 
@@ -22,7 +21,6 @@ def load_reasoner(checkpoint=COSMOS3_EDGE_CHECKPOINT, dtype=SYSTEM2_DTYPE, devic
 
     use_device_map = device is not None and str(device).startswith("cuda")
     model = AutoModelForImageTextToText.from_pretrained(
-        checkpoint, torch_dtype=DTYPE_BY_NAME[dtype], device_map=None
         checkpoint,
         dtype=DTYPE_BY_NAME[dtype],
         device_map="auto" if use_device_map else None,
@@ -57,8 +55,6 @@ def apply_lora(model, r=SYSTEM2_LORA_R, alpha=SYSTEM2_LORA_ALPHA, dropout=SYSTEM
 
 def build_system2_model(checkpoint=COSMOS3_EDGE_CHECKPOINT, device=None):
     """load_reasoner + apply_lora, moved to `device`. The single entry point system2_train.py
-    and system2_infer.py call, so the two-step load/wrap process lives in exactly one place."""
-    model, processor = load_reasoner(checkpoint)
     and system2_infer.py call, so the two-step load/wrap process lives in exactly one place.
 
     Passes `device` to load_reasoner so weights are placed directly on the GPU via
@@ -67,7 +63,6 @@ def build_system2_model(checkpoint=COSMOS3_EDGE_CHECKPOINT, device=None):
     """
     model, processor = load_reasoner(checkpoint, device=device)
     model = apply_lora(model)
-    if device is not None:
     # If device_map="auto" was used, the model is already on GPU; .to() is a no-op then.
     # For CPU or non-CUDA devices it still does the right thing.
     if device is not None and not str(device).startswith("cuda"):
